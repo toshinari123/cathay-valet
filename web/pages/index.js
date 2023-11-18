@@ -12,7 +12,7 @@ import useLocalStorage from '../libs/useLocalStorage'
 import useWebsocket from '../libs/useWebsocket'
 import Image from 'next/image'
 import { Inter } from 'next/font/google'
-import styles from '@/styles/Home.module.css'
+import styles from '../styles/Home.module.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
