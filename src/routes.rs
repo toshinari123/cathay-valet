@@ -93,7 +93,7 @@ pub async fn join_room(
     Ok(HttpResponse::Ok().json(room))
 }
 
-#[get("/users/{user_id}")]
+#[get("/users/{passenger_id}")]
 pub async fn get_user_by_id(
     pool: web::Data<DbPool>,
     id: web::Path<Uuid>,
@@ -135,7 +135,7 @@ pub async fn get_conversation_by_id(
     }
 }
 
-#[get("/users/phone/{user_phone}")]
+/*#[get("/users/phone/{user_phone}")]
 pub async fn get_user_by_phone(
     pool: web::Data<DbPool>,
     phone: web::Path<String>,
@@ -154,7 +154,7 @@ pub async fn get_user_by_phone(
         }).to_string());
         Ok(res)
     }
-}
+}*/
 
 #[get("/rooms")]
 pub async fn get_rooms(
