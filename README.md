@@ -4,7 +4,7 @@ building frontend
 - cd into `cathay-valet\web`
 - `npm install`
 
-building backend (optional, `cargo run` automatically runs `cargo build` if necessary
+building backend (optional, `cargo run` automatically runs `cargo build` if necessary)
 - cd into `cathay-valet`
 - `cargo build`
 
