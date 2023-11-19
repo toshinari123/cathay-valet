@@ -1,53 +1,60 @@
 use serde::{Deserialize, Serialize};
-use crate::schema::*;
-#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable)]
-pub struct User {
+use thisError::Error;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Passenger {
+    //pub id: String,
+    pub firstName: String,
+    pub lastName: String,
+    pub prefix: String,
+    //pub passengerTypeCode: String,
+    //pub gender: String,
+    //pub purposeOfVisit: String,
+    //pub regulatoryRequirements: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Booking {
     pub id: String,
-    pub username: String,
-    pub phone: String,
-    pub created_at: String
+    pub boardPointCode: String,
+    pub offPointCode: String,
+    //pub accessibilities: Vec<String>,
+    pub timeBOT: String,
+    pub timeSTA: String,
+    pub segmentIds: Vec<String>,
+    pub passenger: Passenger,
+    pub maxBagAllowanceWeight: u8,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Queryable, Insertable)]
-pub struct Conversation {
-    pub id: String,
-    pub room_id: String,
-    pub user_id: String,
-    pub content: String,
-    pub created_at: String
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Process {
+    pub start: String,
+    pub end: String,
+    pub cost: u8,
+    pub time: u8,
+    pub comfort: ComfortLevel,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable)]
-pub struct Room {
-    pub id: String,
-    pub name: String,
-    pub last_message: String,
-    pub participant_ids: String,
-    pub created_at: String,
-    pub json_description: String,
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ComfortLevel {
+    Uncomfortable,
+    Normal,
+    Comfortable
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewUser {
-    pub username: String,
-    pub phone: String,
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Output {
+    pub cheapest: Vec<Process>,
+    pub fastest: Vec<Process>,
+    pub mostComfy: Vec<Process>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewConversation {
-    pub user_id: String,
-    pub room_id: String,
-    pub message: String,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewRoom {
-    pub name: String,
-    pub owner: String,
-    pub description: String,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JoinRoom {
-    pub room_id: String,
-    pub user_id: String,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RoomResponse {
-    pub room: Room,
-    pub users: Vec<User>,
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("error while fetching cathay API")]
+    Fetch(#[from] reqwest::Error),
+    #[error("fetched object missing required fields")]
+    MissingFields,
+    #[error("key does not correspond to desired type")]
+    WrongType,
 }

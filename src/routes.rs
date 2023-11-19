@@ -1,177 +1,76 @@
-// src/routes.rs
-use std::time::Instant;
-use std::ops::Deref;
-use actix::*;
-use actix_files::NamedFile;
-use actix_web::{get, post, web, Error, HttpRequest, HttpResponse, Responder};
-use actix_web_actors::ws;
-use diesel::{
-    prelude::*,
-    r2d2::{self, ConnectionManager},
-};
-use serde_json::json;
-use uuid::Uuid;
-use crate::db;
-use crate::models;
-use crate::server;
-use crate::session;
-type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
+use rocket::serde::json::Json;
+use rocket::http::{Status};
+use rocket::response::status;
+use reqwest::header;
+use serde_json::{Value, Map};
+use crate::models::*;
 
-pub async fn index() -> impl Responder {
-	NamedFile::open_async("./static/index.html").await.unwrap()
+fn curl(passenger_id: &str) -> Result<String, Error> {
+    let mut headers = header::HeaderMap::new();
+    headers.insert("accept", "application/json".parse().unwrap());
+    headers.insert("apiKey", "i8oVMsIqzEidSx6BdRZyY8IM4Q775xFY".parse().unwrap());
+    let client = reqwest::blocking::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .unwrap();
+    client.get(&("https://developers.cathaypacific.com/hackathon-apigw/airport/customers/".to_string() + + "/details"))
+        .headers(headers)
+        .send()?
+        .text()?
 }
 
-#[get("/ws")]
-pub async fn chat_server(
-	req: HttpRequest,
-	stream: web::Payload,
-	pool: web::Data<DbPool>,
-	srv: web::Data<Addr<server::ChatServer>>,
-) -> Result<HttpResponse, Error> {
-    println!("ws starting...");
-	ws::start(
-		session::WsChatSession {
-			id: 0,
-			hb: Instant::now(),
-			room: "main".to_string(),
-			addr: srv.get_ref().clone(),
-			db_pool: pool,
-            name: None,
-		},
-		&req, stream)
-}
-
-#[post("/users/create")]
-pub async fn create_user(
-    pool: web::Data<DbPool>,
-    form: web::Json<models::NewUser>,
-) -> Result<HttpResponse, Error> {
-    println!("user create!");
-    let user = web::block(move || {
-        let mut conn = pool.get()?;
-        db::insert_new_user(&mut conn, &form.username, &form.phone)
-    }).await?.map_err(actix_web::error::ErrorUnprocessableEntity)?;
-    Ok(HttpResponse::Ok().json(user))
-}
-
-#[post("/conversations/create")]
-pub async fn create_conversation(
-    pool: web::Data<DbPool>,
-    form: web::Json<models::NewConversation>,
-) -> Result<HttpResponse, Error> {
-    println!("conversation create!");
-    let conversation = web::block(move || {
-        let mut conn = pool.get()?;
-        db::insert_new_conversation(&mut conn, form.deref().clone())
-    }).await?.map_err(actix_web::error::ErrorUnprocessableEntity)?;
-    Ok(HttpResponse::Ok().json(conversation))
-}
-
-#[post("/rooms/create")]
-pub async fn create_room(
-    pool: web::Data<DbPool>,
-    form: web::Json<models::NewRoom>,
-) -> Result<HttpResponse, Error> {
-    println!("room create!");
-    let room = web::block(move || {
-        let mut conn = pool.get()?;
-        db::insert_new_room(&mut conn, form.deref().clone())
-    }).await?.map_err(actix_web::error::ErrorUnprocessableEntity)?;
-    Ok(HttpResponse::Ok().json(room))
-}
-
-#[post("/rooms/join")]
-pub async fn join_room(
-    pool: web::Data<DbPool>,
-    form: web::Json<models::JoinRoom>,
-) -> Result<HttpResponse, Error> {
-    println!("room join!");
-    let room = web::block(move || {
-        let mut conn = pool.get()?;
-        db::join_room(&mut conn, form.deref().clone())
-    }).await?.map_err(actix_web::error::ErrorUnprocessableEntity)?;
-    Ok(HttpResponse::Ok().json(room))
-}
-
-#[get("/users/{passenger_id}")]
-pub async fn get_user_by_id(
-    pool: web::Data<DbPool>,
-    id: web::Path<Uuid>,
-) -> Result<HttpResponse, Error> {
-    let user_id = id.to_owned();
-    let user = web::block(move || {
-        let mut conn = pool.get()?;
-        db::find_user_by_uid(&mut conn, user_id)
-    }).await?.map_err(actix_web::error::ErrorInternalServerError)?;
-    if let Some(user) = user {
-        Ok(HttpResponse::Ok().json(user))
-    } else {
-        let res = HttpResponse::NotFound().body(json!({
-            "error": 404,
-            "messsage": format!("No user found with phone: {id}")
-        }).to_string());
-        Ok(res)
+fn get_obj(obj: Map<String, Value>, key: &str) -> Result<Value, Error> {
+    match obj.get(key).ok_or(Error::MissingFields)? {
+        Value::Object(ob) => Ok(ob),
+        _ => Err(Error::WrongType),
     }
 }
 
-#[get("/conversations/{uid}")]
-pub async fn get_conversation_by_id(
-    pool: web::Data<DbPool>,
-    uid: web::Path<Uuid>,
-) -> Result<HttpResponse, Error> {
-    let room_id = uid.to_owned();
-    let conversations = web::block(move || {
-        let mut conn = pool.get()?;
-        db::get_conversation_by_room_uid(&mut conn, room_id)
-    }).await?.map_err(actix_web::error::ErrorInternalServerError)?;
-    if let Some(data) = conversations {
-        Ok(HttpResponse::Ok().json(data))
-    } else {
-        let res = HttpResponse::NotFound().body(json!({
-            "error": 404,
-            "messsage": format!("No conversation found with room: {room_id}")
-        }).to_string());
-        Ok(res)
+fn get_arr(obj: Map<String, Value>, key: &str) -> Result<Vec<Value>, Error> {
+    match obj.get(key).ok_or(Error::MissingFields)? {
+        Value::Array(ob) => Ok(ob),
+        _ => Err(Error::WrongType),
     }
 }
 
-/*#[get("/users/phone/{user_phone}")]
-pub async fn get_user_by_phone(
-    pool: web::Data<DbPool>,
-    phone: web::Path<String>,
-) -> Result<HttpResponse, Error> {
-    let user_phone = phone.to_owned();
-    let user = web::block(move || {
-        let mut conn = pool.get()?;
-        db::find_user_by_phone(&mut conn, user_phone)
-    }).await?.map_err(actix_web::error::ErrorInternalServerError)?;
-    if let Some(user) = user {
-        Ok(HttpResponse::Ok().json(user))
-    } else {
-        let res = HttpResponse::NotFound().body(json!({
-            "error": 404,
-            "messsage": format!("No user found with phone: {}", phone.to_string())
-        }).to_string());
-        Ok(res)
+fn get_str(obj: Map<String, Value>, key: &str) -> Result<String, Error> {
+    match obj.get(key).ok_or(Error::MissingFields)? {
+        Value::String(ob) => Ok(ob),
+        _ => Err(Error::WrongType),
     }
-}*/
-
-#[get("/rooms")]
-pub async fn get_rooms(
-    pool: web::Data<DbPool>,
-) -> Result<HttpResponse, Error> {
-    let rooms = web::block(move || {
-        let mut conn = pool.get()?;
-        db::get_all_rooms(&mut conn)
-    }).await?.map_err(actix_web::error::ErrorInternalServerError)?;
-    //if !rooms.is_empty() {
-        Ok(HttpResponse::Ok().json(rooms))
-    //} else {
-    //    let res = HttpResponse::NotFound().body(json!({
-    //        "error": 404,
-    //        "messsage": format!("No rooms available at the moment")
-    //    }).to_string());
-    //    Ok(res)
-    //}
 }
 
+fn convert(obj: Map<String, Value>) -> Result<Booking, Error> {
+    let data = get_obj(obj, "data")?;
+    let name = get_obj(get_obj(data, "traveler")?, "name")?;
+    let dfs: Vec<Map<String, Value>>  = get_obj(get_obj("dictionaries")?, "datedFlight")?.iter().collect();
+    let flight = dfs[0];
+    let v = get_arr(flight, "flightPoints")?;
+    Booking {
+        id: get_str(data, "recordLocator")?,
+        boardPointCode: get_str(v[0], "iataCode")?,
+        offPointCode: get_str(v[v.size() - 1], "iataCode")?,
+        timeBOT: get_str(get_arr(get_obj(v[0], "departure")?, "timings")?[0], "value")?,
+        timeSTA: get_str(get_arr(get_obj(v[v.size() - 2], "arrival")?, "timings")?[0], "value")?,
+        segmentIds: vec![],
+        passenger: Passenger {
+            firstName: get_str(name, "firstName")?,
+            lastName: get_str(name, "lastName")?,
+            prefix: get_str(name, "prefix")?,
+        },
+        maxBagAllowanceWeight: 0,
+    }
+}
+
+#[get("/<passenger_id>")]
+pub fn get(passenger_id: &str) -> Json<Output> {
+    match curl(passenger_id) {
+        Ok(s) => {
+            let parsed: Value = serde_json::from_str(&s)?;
+            let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+        },
+        Err(e) => {
+
+        },
+    }
+}
