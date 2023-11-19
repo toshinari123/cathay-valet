@@ -10,6 +10,7 @@ pkgs.mkShell {
     pkgs.nodejs
     pkgs.yarn
     #nodePackages.shell
+    pkgs.sqlite
   ];
 
   shellHook = ''

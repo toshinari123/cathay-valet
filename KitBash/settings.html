@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mobile Settings Page</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+						color: #016065;
+        }
+        .settings-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .settings-list li {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+        }
+        .settings-list li i {
+            margin-right: 10px;
+        }
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            background-color: #f8f9fa;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+            padding: 10px 0;
+        }
+        .bottom-nav a {
+            color: #333;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Settings</h1>
+    <ul class="settings-list">
+        <li><i class="fas fa-wifi"></i>Wi-Fi</li>
+        <li><i class="fas fa-bluetooth"></i>Bluetooth</li>
+        <li><i class="fas fa-sun"></i>Display & Brightness</li>
+        <li><i class="fas fa-soundcloud"></i>Sounds & Haptics</li>
+        <li><i class="fas fa-battery-full"></i>Battery</li>
+        <li><i class="fas fa-user"></i>Privacy</li>
+        <li><i class="fas fa-lock"></i>Security</li>
+    </ul>
+</body>
+</html>
